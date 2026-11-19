@@ -428,7 +428,7 @@
         <div class="divisor"></div>
         <span class="rotulo">Estado do fluxo</span>
         <div class="estado"><span class="estado-ponto" style="background:${cor};box-shadow:0 0 0 6px color-mix(in srgb, ${cor} 18%, transparent)"></span><span class="estado-nome" style="color:${cor}">${est.nome}</span></div>
-        <div class="confianca"><span class="sub" style="width:84px">Confiança</span><div class="barra"><div style="width:${conf}%;background:${cor}"></div></div><strong style="width:44px;text-align:right">${conf}%</strong></div>
+        ${d.estado && d.estado !== "neutro" ? `<div class="confianca"><span class="sub" style="width:84px">Confiança</span><div class="barra"><div style="width:${conf}%;background:${cor}"></div></div><strong style="width:44px;text-align:right">${conf}%</strong></div>` : ""}
         ${d.frase ? `<p class="frase">${FM.esc(d.frase)}</p>` : ""}
       </div>
       <div class="cartao">
