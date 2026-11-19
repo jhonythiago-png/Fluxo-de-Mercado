@@ -140,7 +140,7 @@
 
   function avaliar() {
     if (!lic.sessao_ok) return sessaoEncerrada();
-    if (!lic.termos_ok) return mostrarTermos();
+    if (!lic.termos_ok && lic.papel !== "master") return mostrarTermos();
     if (["bloqueado", "suspenso", "sem_plano"].includes(lic.status)) return bloquear(lic.status);
     abrirApp();
   }
@@ -204,6 +204,7 @@
   // ---------------- app ----------------
   function abrirApp() {
     mostrar("app");
+    $("#btn-master").hidden = lic.papel !== "master";
     renderLegenda();
     renderFaixas();
     renderPreferencias();
@@ -221,7 +222,7 @@
     try {
       await carregarLicenca();
     } catch (e) { return; }
-    if (!lic.sessao_ok || !lic.termos_ok || ["bloqueado", "suspenso", "sem_plano"].includes(lic.status)) {
+    if (!lic.sessao_ok || (!lic.termos_ok && lic.papel !== "master") || ["bloqueado", "suspenso", "sem_plano"].includes(lic.status)) {
       avaliar();
       return;
     }
