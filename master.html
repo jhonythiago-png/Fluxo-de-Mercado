@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0A0D13">
+<meta name="robots" content="noindex">
+<title>Fluxo do Mercado - Master</title>
+<link rel="icon" href="icones/favicon-32.png" sizes="32x32">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/estilo.css">
+</head>
+<body>
+
+<section id="tela-carregando" class="tela-centro">
+  <div class="caixa-centro"><div class="marca"><img src="icones/icone-192.png" alt=""><div><strong>Fluxo do Mercado</strong><span>Carregando…</span></div></div></div>
+</section>
+
+<section id="tela-login" class="tela-centro" hidden>
+  <form id="form-login" class="caixa-centro cartao" novalidate>
+    <div class="marca"><img src="icones/icone-192.png" alt=""><div><strong>Fluxo do Mercado</strong><span>Painel master</span></div></div>
+    <div class="campo"><label for="login-email">E-mail</label><input id="login-email" type="email" autocomplete="username" required></div>
+    <div class="campo"><label for="login-senha">Senha</label><input id="login-senha" type="password" autocomplete="current-password" required></div>
+    <p id="login-erro" class="erro-msg" role="alert"></p>
+    <button class="btn primario" type="submit" id="btn-entrar">Entrar</button>
+  </form>
+</section>
+
+<section id="tela-negado" class="tela-centro" hidden>
+  <div class="caixa-centro cartao" style="text-align:center">
+    <h1 style="font-size:24px">Acesso restrito</h1>
+    <p class="sub" style="margin:0">Esta área é só para o administrador.</p>
+    <div class="dialogo-acoes" style="justify-content:center"><a class="btn" href="./">Ir para o app</a><button class="btn" type="button" data-sair>Sair</button></div>
+  </div>
+</section>
+
+<div id="tela-master" hidden>
+  <div class="container">
+    <header class="topo">
+      <div class="marca"><img src="icones/icone-192.png" alt=""><div><strong>Fluxo do Mercado</strong><span>Painel master</span></div></div>
+      <nav class="abas" aria-label="Seções">
+        <button type="button" data-aba="geral" aria-pressed="true">Visão geral</button>
+        <button type="button" data-aba="usuarios" aria-pressed="false">Usuários</button>
+        <button type="button" data-aba="planos" aria-pressed="false">Planos</button>
+        <button type="button" data-aba="config" aria-pressed="false">Configurações</button>
+        <button type="button" data-aba="acessos" aria-pressed="false">Acessos</button>
+      </nav>
+      <div style="display:flex;gap:8px"><a class="btn pequeno" href="./" target="_blank" rel="noopener">Abrir o app</a><button class="btn pequeno" type="button" data-sair>Sair</button></div>
+    </header>
+
+    <!-- VISÃO GERAL -->
+    <section id="aba-geral" class="pilha">
+      <div class="faixa" id="coletor-faixa"><span class="pilula" style="border:0;padding:0;background:transparent"><span class="ponto" id="coletor-ponto"></span><span id="coletor-texto">Coletor</span></span></div>
+      <div class="resumo" id="resumo"></div>
+      <div class="cartao pilha">
+        <div class="linha-flex"><h2>Precisam de atenção</h2><span class="sub">Vencendo, em carência e bloqueados recentemente</span></div>
+        <div class="tabela-caixa"><table>
+          <thead><tr><th>Usuário</th><th>Situação</th><th>Vence em</th><th>Contato</th><th></th></tr></thead>
+          <tbody id="atencao"></tbody>
+        </table></div>
+      </div>
+    </section>
+
+    <!-- USUÁRIOS -->
+    <section id="aba-usuarios" class="cartao pilha" hidden>
+      <div class="linha-flex">
+        <h2>Usuários</h2>
+        <button class="btn primario" type="button" id="btn-novo">Novo usuário</button>
+      </div>
+      <div class="linha-flex" style="justify-content:flex-start">
+        <div class="campo" style="flex:1 1 260px"><label for="busca">Buscar</label><input id="busca" type="search" placeholder="Nome, e-mail, telefone ou Telegram"></div>
+        <div class="campo" style="flex:0 1 220px"><label for="filtro-status">Situação</label>
+          <select id="filtro-status">
+            <option value="">Todas</option>
+            <option value="ativo">Ativo</option><option value="vencendo">Vencendo</option><option value="carencia">Em carência</option>
+            <option value="bloqueado">Bloqueado</option><option value="suspenso">Suspenso</option><option value="sem_plano">Sem plano</option>
+            <option value="teste">Em teste</option>
+          </select></div>
+      </div>
+      <div class="tabela-caixa"><table>
+        <thead><tr><th>Usuário</th><th>Situação</th><th>Plano</th><th>Vence em</th><th>Último acesso</th><th>Total pago</th></tr></thead>
+        <tbody id="usuarios"></tbody>
+      </table></div>
+    </section>
+
+    <!-- PLANOS -->
+    <section id="aba-planos" class="cartao pilha" hidden>
+      <div class="linha-flex"><h2>Planos</h2><button class="btn" type="button" id="btn-novo-plano">Adicionar plano</button></div>
+      <p class="sub" style="margin:0">Planos desativados somem da tela do cliente, mas continuam no histórico de pagamentos.</p>
+      <div class="tabela-caixa"><table>
+        <thead><tr><th>Nome</th><th>Dias</th><th>Valor (R$)</th><th>Ordem</th><th>Ativo</th><th></th></tr></thead>
+        <tbody id="planos"></tbody>
+      </table></div>
+    </section>
+
+    <!-- CONFIGURAÇÕES -->
+    <section id="aba-config" hidden>
+      <form id="form-config" class="pilha">
+        <div class="cartao pilha">
+          <h2>Prazos</h2>
+          <div class="grade-2">
+            <div class="campo"><label for="cfg-carencia">Dias de carência depois do vencimento</label><input id="cfg-carencia" type="number" min="0" max="60" required></div>
+            <div class="campo"><label for="cfg-aviso">Avisar quantos dias antes de vencer</label><input id="cfg-aviso" type="number" min="0" max="60" required></div>
+            <div class="campo"><label for="cfg-teste">Dias do teste grátis</label><input id="cfg-teste" type="number" min="0" max="60" required></div>
+            <div class="campo"><label for="cfg-coletor">Considerar dados pausados depois de (segundos)</label><input id="cfg-coletor" type="number" min="5" max="3600" required></div>
+          </div>
+        </div>
+        <div class="cartao pilha">
+          <h2>Renovação pelo Telegram</h2>
+          <div class="campo"><label for="cfg-telegram">Seu usuário do Telegram</label><input id="cfg-telegram" type="text" placeholder="ex.: jhonyberaldo (sem @)"><span class="dica">Os botões "Renovar pelo Telegram" abrem uma conversa com este usuário.</span></div>
+          <div class="campo"><label for="cfg-mensagem">Mensagem pronta que o cliente envia</label><textarea id="cfg-mensagem" style="min-height:80px"></textarea><span class="dica">Pode usar {nome}, {email} e {plano}.</span></div>
+          <div><a class="btn pequeno" id="cfg-testar-telegram" href="#" target="_blank" rel="noopener">Testar link do Telegram</a></div>
+        </div>
+        <div class="cartao pilha">
+          <div class="linha-flex"><h2>Aviso geral</h2>
+            <label style="display:flex;align-items:center;gap:10px;cursor:pointer"><span class="sub">Mostrar para todos</span><button type="button" class="interruptor" id="cfg-aviso-ativo" aria-pressed="false" aria-label="Mostrar aviso geral"><span></span></button></label></div>
+          <div class="campo"><label for="cfg-aviso-texto">Texto do aviso</label><input id="cfg-aviso-texto" type="text" placeholder="ex.: Hoje sem dados até 10h por manutenção"></div>
+        </div>
+        <div class="cartao pilha">
+          <h2>Termos de uso</h2>
+          <div class="campo"><label for="cfg-termos">Texto dos termos</label><textarea id="cfg-termos" style="min-height:260px"></textarea></div>
+          <label style="display:flex;align-items:center;gap:10px"><input type="checkbox" id="cfg-termos-nova"> <span>Pedir que todos aceitem de novo (nova versão) <span class="sub" id="cfg-termos-versao"></span></span></label>
+        </div>
+        <div class="dialogo-acoes"><button class="btn primario" type="submit">Salvar configurações</button></div>
+      </form>
+    </section>
+
+    <!-- ACESSOS -->
+    <section id="aba-acessos" class="cartao pilha" hidden>
+      <div class="linha-flex"><h2>Últimos acessos</h2><span class="sub">Muitos aparelhos diferentes na mesma conta podem indicar compartilhamento</span></div>
+      <div class="tabela-caixa"><table>
+        <thead><tr><th>Data</th><th>Usuário</th><th>Aparelho</th></tr></thead>
+        <tbody id="acessos"></tbody>
+      </table></div>
+    </section>
+  </div>
+</div>
+
+<!-- NOVO USUÁRIO -->
+<dialog id="dlg-novo" aria-labelledby="novo-titulo">
+  <form id="form-novo" class="dialogo-corpo" novalidate>
+    <h2 id="novo-titulo">Novo usuário</h2>
+    <div class="grade-2">
+      <div class="campo"><label for="novo-nome">Nome</label><input id="novo-nome" type="text" required></div>
+      <div class="campo"><label for="novo-email">E-mail</label><input id="novo-email" type="email" required></div>
+      <div class="campo"><label for="novo-senha">Senha provisória</label><div style="display:flex;gap:8px"><input id="novo-senha" type="text" required style="flex:1;min-width:0"><button class="btn pequeno" type="button" id="btn-gerar-senha">Gerar</button></div></div>
+      <div class="campo"><label for="novo-telefone">WhatsApp / telefone</label><input id="novo-telefone" type="tel"></div>
+      <div class="campo"><label for="novo-telegram">Telegram do cliente</label><input id="novo-telegram" type="text" placeholder="sem @"></div>
+      <div class="campo"><label for="novo-liberar">Liberar acesso</label><select id="novo-liberar"></select></div>
+    </div>
+    <div class="campo"><label for="novo-obs">Observação</label><input id="novo-obs" type="text"></div>
+    <p id="novo-erro" class="erro-msg" role="alert"></p>
+    <div class="dialogo-acoes"><button class="btn" type="button" data-fechar>Cancelar</button><button class="btn primario" type="submit" id="btn-criar">Criar usuário</button></div>
+  </form>
+  <div id="novo-pronto" class="dialogo-corpo" hidden>
+    <h2>Usuário criado</h2>
+    <p class="sub" style="margin:0">Envie estes dados para o cliente:</p>
+    <textarea id="novo-mensagem" class="termos-texto" style="min-height:140px;width:100%" readonly></textarea>
+    <div class="dialogo-acoes"><button class="btn" type="button" id="btn-copiar">Copiar</button><button class="btn primario" type="button" data-fechar>Concluir</button></div>
+  </div>
+</dialog>
+
+<!-- DETALHE DO USUÁRIO -->
+<dialog id="dlg-usuario" aria-labelledby="usr-titulo">
+  <div class="dialogo-corpo">
+    <div class="linha-flex"><div><h2 id="usr-titulo"></h2><span class="sub" id="usr-email"></span></div><button class="btn pequeno" type="button" data-fechar>Fechar</button></div>
+    <div class="resumo" id="usr-resumo"></div>
+
+    <form id="form-renovar" class="secao-dialogo">
+      <h3>Renovar</h3>
+      <div class="grade-2">
+        <div class="campo"><label for="ren-plano">Plano</label><select id="ren-plano"></select></div>
+        <div class="campo"><label for="ren-valor">Valor recebido (R$)</label><input id="ren-valor" type="number" min="0" step="0.01"></div>
+        <div class="campo"><label for="ren-forma">Forma de pagamento</label><select id="ren-forma"><option>PIX</option><option>Dinheiro</option><option>Cartão</option><option>Transferência</option><option>Cortesia</option><option>Outro</option></select></div>
+        <div class="campo"><label for="ren-obs">Observação</label><input id="ren-obs" type="text"></div>
+      </div>
+      <div class="linha-flex"><span id="ren-previa" class="sub"></span><button class="btn primario" type="submit">Confirmar renovação</button></div>
+    </form>
+
+    <div class="secao-dialogo">
+      <h3>Ações</h3>
+      <div class="dialogo-acoes" style="justify-content:flex-start">
+        <button class="btn pequeno" type="button" id="usr-teste">Liberar teste grátis</button>
+        <button class="btn pequeno" type="button" id="usr-sessao">Desconectar aparelho</button>
+        <button class="btn pequeno" type="button" id="usr-senha">Nova senha</button>
+        <button class="btn pequeno" type="button" id="usr-suspender">Suspender</button>
+        <a class="btn pequeno telegram" id="usr-telegram" href="#" target="_blank" rel="noopener">Chamar no Telegram</a>
+        <button class="btn pequeno perigo" type="button" id="usr-excluir">Excluir usuário</button>
+      </div>
+      <div class="linha-flex" style="justify-content:flex-start;align-items:flex-end">
+        <div class="campo"><label for="usr-vence">Ajustar vencimento manualmente</label><input id="usr-vence" type="datetime-local"></div>
+        <button class="btn pequeno" type="button" id="usr-salvar-vence">Salvar data</button>
+      </div>
+    </div>
+
+    <form id="form-dados" class="secao-dialogo">
+      <h3>Dados</h3>
+      <div class="grade-2">
+        <div class="campo"><label for="usr-nome">Nome</label><input id="usr-nome" type="text"></div>
+        <div class="campo"><label for="usr-telefone">WhatsApp / telefone</label><input id="usr-telefone" type="tel"></div>
+        <div class="campo"><label for="usr-tg">Telegram do cliente</label><input id="usr-tg" type="text" placeholder="sem @"></div>
+        <div class="campo"><label for="usr-obs">Observação</label><input id="usr-obs" type="text"></div>
+      </div>
+      <div class="dialogo-acoes"><button class="btn" type="submit">Salvar dados</button></div>
+    </form>
+
+    <div class="secao-dialogo">
+      <h3>Pagamentos</h3>
+      <div class="tabela-caixa"><table>
+        <thead><tr><th>Data</th><th>Plano</th><th>Valor</th><th>Forma</th><th>Válido até</th><th></th></tr></thead>
+        <tbody id="usr-pagamentos"></tbody>
+      </table></div>
+    </div>
+  </div>
+</dialog>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="js/config.js"></script>
+<script src="js/comum.js"></script>
+<script src="js/master.js"></script>
+</body>
+</html>
