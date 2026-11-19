@@ -35,9 +35,9 @@
     const erro = $("#login-erro");
     const botao = $("#btn-entrar");
     erro.textContent = "";
-    const email = $("#login-email").value.trim();
+    const email = FM.emailDoUsuario($("#login-usuario").value);
     const senha = $("#login-senha").value;
-    if (!email || !senha) { erro.textContent = "Preencha e-mail e senha."; return; }
+    if (!email || !senha) { erro.textContent = "Preencha usuário e senha."; return; }
     botao.disabled = true;
     botao.textContent = "Entrando…";
     try {
@@ -163,7 +163,7 @@
     $("#atencao").innerHTML = lista.map((u) => {
       const tg = linkCobranca(u);
       return `<tr>
-        <td><strong>${FM.esc(u.nome || "—")}</strong><div class="sub">${FM.esc(u.email)}</div></td>
+        <td><strong>${FM.esc(u.nome || "—")}</strong><div class="sub">usuário: ${FM.esc(u.usuario)}</div></td>
         <td>${chipStatus(u)}</td>
         <td>${FM.dataHora(u.vence_em)}</td>
         <td>${tg ? `<a class="btn pequeno telegram" href="${FM.esc(tg)}" target="_blank" rel="noopener">Telegram</a>` : `<span class="sub">${FM.esc(u.telefone || "sem contato")}</span>`}</td>
@@ -194,13 +194,13 @@
     const lista = usuarios.filter((u) => {
       if (filtro === "teste" && !(u.teste && ["ativo", "vencendo", "carencia"].includes(u.status))) return false;
       if (filtro && filtro !== "teste" && u.status !== filtro) return false;
-      if (busca && ![u.nome, u.email, u.telefone, u.telegram].join(" ").toLowerCase().includes(busca)) return false;
+      if (busca && ![u.nome, u.usuario, u.telefone, u.telegram].join(" ").toLowerCase().includes(busca)) return false;
       return true;
     });
     if (!lista.length) { $("#usuarios").innerHTML = `<tr><td colspan="6" class="vazio">Nenhum usuário encontrado.</td></tr>`; return; }
     $("#usuarios").innerHTML = lista.map((u) => `
       <tr class="clicavel" data-abrir="${u.id}" tabindex="0">
-        <td><strong>${FM.esc(u.nome || "—")}</strong><div class="sub">${FM.esc(u.email)}</div></td>
+        <td><strong>${FM.esc(u.nome || "—")}</strong><div class="sub">usuário: ${FM.esc(u.usuario)}</div></td>
         <td>${chipStatus(u)}</td>
         <td>${FM.esc(u.plano_nome || (u.teste ? "Teste" : "—"))}</td>
         <td>${FM.dataHora(u.vence_em)}</td>
@@ -238,8 +238,8 @@
 
   function preencherUsuario() {
     const u = atual;
-    $("#usr-titulo").textContent = u.nome || u.email;
-    $("#usr-email").textContent = u.email;
+    $("#usr-titulo").textContent = u.nome || u.usuario;
+    $("#usr-email").textContent = "usuário: " + (u.usuario || "");
     const carenciaAte = u.vence_em ? new Date(new Date(u.vence_em).getTime() + config.dias_carencia * 86400000).toISOString() : null;
     $("#usr-resumo").innerHTML = `
       <div class="cartao"><span class="rotulo">Situação</span><span>${chipStatus(u)}</span></div>
@@ -294,7 +294,7 @@
   });
 
   $("#usr-teste").addEventListener("click", async () => {
-    if (!confirm(`Liberar ${config.dias_teste} dias de teste grátis para ${atual.nome || atual.email}?`)) return;
+    if (!confirm(`Liberar ${config.dias_teste} dias de teste grátis para ${atual.nome || atual.usuario}?`)) return;
     const r = await chamar("master_liberar_teste", { p_usuario: atual.id }).catch(() => null);
     if (!r) return;
     FM.aviso(`Teste liberado até ${FM.dataHora(r.vence_em)}`, "ok");
@@ -308,7 +308,7 @@
 
   $("#usr-suspender").addEventListener("click", async () => {
     const suspender = !atual.suspenso;
-    if (suspender && !confirm(`Suspender o acesso de ${atual.nome || atual.email}?`)) return;
+    if (suspender && !confirm(`Suspender o acesso de ${atual.nome || atual.usuario}?`)) return;
     await chamar("master_suspender", { p_usuario: atual.id, p_suspenso: suspender }, suspender ? "Acesso suspenso" : "Acesso reativado").catch(() => null);
     carregarUsuarios(); carregarResumo();
   });
@@ -330,10 +330,10 @@
   });
 
   $("#usr-excluir").addEventListener("click", async () => {
-    const alvo = atual.email;
-    const conf = prompt(`Isso apaga o usuário e todo o histórico dele. Para confirmar, digite o e-mail:\n${alvo}`);
+    const alvo = atual.usuario || "";
+    const conf = prompt(`Isso apaga o usuário e todo o histórico dele. Para confirmar, digite o usuário:\n${alvo}`);
     if (conf === null) return;
-    if (conf.trim().toLowerCase() !== alvo.toLowerCase()) { FM.aviso("E-mail não confere. Nada foi excluído.", "erro"); return; }
+    if (conf.trim().toLowerCase() !== alvo.toLowerCase()) { FM.aviso("Usuário não confere. Nada foi excluído.", "erro"); return; }
     const { data, error } = await sb.functions.invoke("admin-usuarios", { body: { acao: "excluir", id: atual.id } });
     if (error || (data && data.erro)) { FM.aviso(await erroFuncao(error, data), "erro"); return; }
     $("#dlg-usuario").close();
@@ -410,16 +410,17 @@
     const erro = $("#novo-erro");
     erro.textContent = "";
     const nome = $("#novo-nome").value.trim();
-    const email = $("#novo-email").value.trim().toLowerCase();
+    const usuario = $("#novo-usuario").value.trim().toLowerCase();
     const senha = $("#novo-senha").value.trim();
-    if (!nome || !email) { erro.textContent = "Preencha nome e e-mail."; return; }
+    if (!nome || !usuario) { erro.textContent = "Preencha nome e usuário."; return; }
+    if (!/^[a-z0-9._-]{3,30}$/.test(usuario)) { erro.textContent = "Usuário: de 3 a 30 letras minúsculas, números, ponto, hífen ou sublinhado, sem espaço e sem acento."; return; }
     if (senha.length < 6) { erro.textContent = "A senha precisa ter pelo menos 6 caracteres."; return; }
     const botao = $("#btn-criar");
     botao.disabled = true;
     botao.textContent = "Criando…";
     try {
       const { data, error } = await sb.functions.invoke("admin-usuarios", {
-        body: { acao: "criar", nome, email, senha, telefone: $("#novo-telefone").value.trim(), telegram: $("#novo-telegram").value.trim().replace(/^@/, ""), observacao: $("#novo-obs").value.trim() },
+        body: { acao: "criar", nome, usuario, senha, telefone: $("#novo-telefone").value.trim(), telegram: $("#novo-telegram").value.trim().replace(/^@/, ""), observacao: $("#novo-obs").value.trim() },
       });
       if (error || (data && data.erro)) throw new Error(await erroFuncao(error, data));
       const liberar = $("#novo-liberar").value;
@@ -432,7 +433,7 @@
         validade = `\nAcesso válido até: ${FM.dataHora(r.vence_em)}`;
       }
       const endereco = new URL("./", location.href).href;
-      $("#novo-mensagem").value = `Olá, ${nome}! Seu acesso ao Fluxo do Mercado está pronto.\n\nEndereço: ${endereco}\nE-mail: ${email}\nSenha: ${senha}${validade}\n\nNo computador ou no celular, você pode instalar o app pelo navegador (Minha conta > Instalar o app).`;
+      $("#novo-mensagem").value = `Olá, ${nome}! Seu acesso ao Fluxo do Mercado está pronto.\n\nEndereço: ${endereco}\nUsuário: ${usuario}\nSenha: ${senha}${validade}\n\nNo computador ou no celular, você pode instalar o app pelo navegador (Minha conta > Instalar o app).`;
       $("#form-novo").hidden = true;
       $("#novo-pronto").hidden = false;
       carregarUsuarios(); carregarResumo();
@@ -518,7 +519,7 @@
   }
 
   function atualizarTesteTelegram() {
-    const link = FM.linkTelegram($("#cfg-telegram").value, FM.montarMensagem($("#cfg-mensagem").value, { nome: "Cliente Teste", email: "cliente@email.com", plano: "Mensal" }));
+    const link = FM.linkTelegram($("#cfg-telegram").value, FM.montarMensagem($("#cfg-mensagem").value, { nome: "Cliente Teste", usuario: "cliente.teste", plano: "Mensal" }));
     const a = $("#cfg-testar-telegram");
     if (link) { a.href = link; a.hidden = false; } else a.hidden = true;
   }
@@ -561,12 +562,12 @@
   async function carregarAcessos() {
     const corpo = $("#acessos");
     corpo.innerHTML = `<tr><td colspan="3" class="vazio">Carregando…</td></tr>`;
-    const { data, error } = await sb.from("acessos").select("criado_em, aparelho, perfis(nome, email)").order("criado_em", { ascending: false }).limit(300);
+    const { data, error } = await sb.from("acessos").select("criado_em, aparelho, perfis(nome, usuario)").order("criado_em", { ascending: false }).limit(300);
     if (error) { corpo.innerHTML = `<tr><td colspan="3" class="vazio">${FM.esc(FM.erroAmigavel(error))}</td></tr>`; return; }
     if (!data.length) { corpo.innerHTML = `<tr><td colspan="3" class="vazio">Nenhum acesso ainda.</td></tr>`; return; }
     corpo.innerHTML = data.map((a) => `<tr>
       <td class="sub">${FM.dataHora(a.criado_em)}</td>
-      <td><strong>${FM.esc((a.perfis && a.perfis.nome) || "—")}</strong><div class="sub">${FM.esc((a.perfis && a.perfis.email) || "")}</div></td>
+      <td><strong>${FM.esc((a.perfis && a.perfis.nome) || "—")}</strong><div class="sub">usuário: ${FM.esc((a.perfis && a.perfis.usuario) || "")}</div></td>
       <td>${FM.esc(a.aparelho)}</td>
     </tr>`).join("");
   }

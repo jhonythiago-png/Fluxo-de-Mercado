@@ -85,12 +85,12 @@
 
   $("#form-login").addEventListener("submit", async (ev) => {
     ev.preventDefault();
-    const email = $("#login-email").value.trim();
+    const email = FM.emailDoUsuario($("#login-usuario").value);
     const senha = $("#login-senha").value;
     const erro = $("#login-erro");
     const botao = $("#btn-entrar");
     erro.textContent = "";
-    if (!email || !senha) { erro.textContent = "Preencha e-mail e senha."; return; }
+    if (!email || !senha) { erro.textContent = "Preencha usuário e senha."; return; }
     botao.disabled = true;
     botao.textContent = "Entrando…";
     try {
@@ -147,7 +147,7 @@
 
   function linkRenovar() {
     return FM.linkTelegram(lic && lic.telegram, FM.montarMensagem(lic && lic.mensagem_renovacao, {
-      nome: lic && lic.nome, email: lic && lic.email, plano: (lic && lic.plano) || "",
+      nome: lic && lic.nome, usuario: lic && lic.usuario, email: lic && lic.usuario, plano: (lic && lic.plano) || "",
     }));
   }
 
@@ -187,7 +187,7 @@
       sem_plano: ["Acesso ainda não liberado", "Escolha um plano e fale com o suporte para liberar seu acesso."],
     };
     const [titulo, texto] = textos[tipo] || textos.bloqueado;
-    $("#bloqueio-email").textContent = lic.email || "";
+    $("#bloqueio-email").textContent = lic.usuario ? "Usuário: " + lic.usuario : "";
     $("#bloqueio-titulo").textContent = titulo;
     $("#bloqueio-texto").textContent = texto;
     $("#bloqueio-planos").innerHTML = tipo === "suspenso" ? "" : planosHtml();
@@ -561,7 +561,7 @@
   function renderConta() {
     const st = FM.STATUS[lic.status] || FM.STATUS.sem_plano;
     $("#conta-resumo").innerHTML = `
-      <div class="cartao"><span class="rotulo">Situação</span><span><span class="chip ${st.classe}">${st.nome}</span>${lic.teste ? ' <span class="chip teste">Teste</span>' : ""}</span><span class="sub">${FM.esc(lic.email)}</span></div>
+      <div class="cartao"><span class="rotulo">Situação</span><span><span class="chip ${st.classe}">${st.nome}</span>${lic.teste ? ' <span class="chip teste">Teste</span>' : ""}</span><span class="sub">Usuário: ${FM.esc(lic.usuario || "")}</span></div>
       <div class="cartao"><span class="rotulo">Plano</span><span class="valor" style="font-size:22px">${FM.esc(lic.plano || (lic.teste ? "Teste" : "—"))}</span></div>
       <div class="cartao"><span class="rotulo">Válido até</span><span class="valor" style="font-size:22px">${FM.data(lic.vence_em)}</span><span class="sub">${lic.vence_em ? FM.hora(lic.vence_em) : ""}</span></div>
       <div class="cartao"><span class="rotulo">Prazo final para renovar</span><span class="valor" style="font-size:22px">${FM.data(lic.carencia_ate)}</span><span class="sub">depois disso o acesso é bloqueado</span></div>`;

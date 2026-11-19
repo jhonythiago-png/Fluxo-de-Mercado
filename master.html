@@ -20,7 +20,7 @@
 <section id="tela-login" class="tela-centro" hidden>
   <form id="form-login" class="caixa-centro cartao" novalidate>
     <div class="marca"><img src="icones/icone-192.png" alt=""><div><strong>Fluxo do Mercado</strong><span>Painel master</span></div></div>
-    <div class="campo"><label for="login-email">E-mail</label><input id="login-email" type="email" autocomplete="username" required></div>
+    <div class="campo"><label for="login-usuario">Usuário</label><input id="login-usuario" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required></div>
     <div class="campo"><label for="login-senha">Senha</label><input id="login-senha" type="password" autocomplete="current-password" required></div>
     <p id="login-erro" class="erro-msg" role="alert"></p>
     <button class="btn primario" type="submit" id="btn-entrar">Entrar</button>
@@ -69,7 +69,7 @@
         <button class="btn primario" type="button" id="btn-novo">Novo usuário</button>
       </div>
       <div class="linha-flex" style="justify-content:flex-start">
-        <div class="campo" style="flex:1 1 260px"><label for="busca">Buscar</label><input id="busca" type="search" placeholder="Nome, e-mail, telefone ou Telegram"></div>
+        <div class="campo" style="flex:1 1 260px"><label for="busca">Buscar</label><input id="busca" type="search" placeholder="Nome, usuário, telefone ou Telegram"></div>
         <div class="campo" style="flex:0 1 220px"><label for="filtro-status">Situação</label>
           <select id="filtro-status">
             <option value="">Todas</option>
@@ -109,7 +109,7 @@
         <div class="cartao pilha">
           <h2>Renovação pelo Telegram</h2>
           <div class="campo"><label for="cfg-telegram">Seu usuário do Telegram</label><input id="cfg-telegram" type="text" placeholder="ex.: jhonyberaldo (sem @)"><span class="dica">Os botões "Renovar pelo Telegram" abrem uma conversa com este usuário.</span></div>
-          <div class="campo"><label for="cfg-mensagem">Mensagem pronta que o cliente envia</label><textarea id="cfg-mensagem" style="min-height:80px"></textarea><span class="dica">Pode usar {nome}, {email} e {plano}.</span></div>
+          <div class="campo"><label for="cfg-mensagem">Mensagem pronta que o cliente envia</label><textarea id="cfg-mensagem" style="min-height:80px"></textarea><span class="dica">Pode usar {nome}, {usuario} e {plano}.</span></div>
           <div><a class="btn pequeno" id="cfg-testar-telegram" href="#" target="_blank" rel="noopener">Testar link do Telegram</a></div>
         </div>
         <div class="cartao pilha">
@@ -143,7 +143,7 @@
     <h2 id="novo-titulo">Novo usuário</h2>
     <div class="grade-2">
       <div class="campo"><label for="novo-nome">Nome</label><input id="novo-nome" type="text" required></div>
-      <div class="campo"><label for="novo-email">E-mail</label><input id="novo-email" type="email" required></div>
+      <div class="campo"><label for="novo-usuario">Usuário (para entrar)</label><input id="novo-usuario" type="text" autocapitalize="none" autocorrect="off" spellcheck="false" required placeholder="ex.: joao.silva"><span class="dica">Minúsculas, números, ponto ou hífen. Sem espaço e sem acento.</span></div>
       <div class="campo"><label for="novo-senha">Senha provisória</label><div style="display:flex;gap:8px"><input id="novo-senha" type="text" required style="flex:1;min-width:0"><button class="btn pequeno" type="button" id="btn-gerar-senha">Gerar</button></div></div>
       <div class="campo"><label for="novo-telefone">WhatsApp / telefone</label><input id="novo-telefone" type="tel"></div>
       <div class="campo"><label for="novo-telegram">Telegram do cliente</label><input id="novo-telegram" type="text" placeholder="sem @"></div>

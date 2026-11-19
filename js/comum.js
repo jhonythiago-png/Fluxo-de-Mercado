@@ -10,6 +10,14 @@
     : null;
 
   const FUSO = "America/Sao_Paulo";
+  const DOMINIO_USUARIOS = "usuarios.fluxodomercado.app";
+
+  // Login por usuário: o Supabase exige e-mail, então o usuário vira um e-mail interno
+  function emailDoUsuario(usuario) {
+    const u = String(usuario || "").trim().toLowerCase();
+    if (!u) return "";
+    return u.includes("@") ? u : `${u}@${DOMINIO_USUARIOS}`;
+  }
 
   const STATUS = {
     master: { nome: "Master", classe: "master" },
@@ -130,10 +138,10 @@
 
   function erroAmigavel(e) {
     const m = (e && (e.message || e.error_description || e.erro)) || String(e || "");
-    if (/Invalid login credentials/i.test(m)) return "E-mail ou senha incorretos.";
-    if (/Email not confirmed/i.test(m)) return "E-mail ainda não confirmado.";
+    if (/Invalid login credentials/i.test(m)) return "Usuário ou senha incorretos.";
+    if (/Email not confirmed/i.test(m)) return "Conta ainda não liberada. Fale com o suporte.";
     if (/Failed to fetch|NetworkError/i.test(m)) return "Sem conexão com o servidor. Confira sua internet.";
-    if (/already been registered|already registered/i.test(m)) return "Já existe um usuário com esse e-mail.";
+    if (/already been registered|already registered/i.test(m)) return "Esse usuário já existe. Escolha outro.";
     return m || "Algo deu errado.";
   }
 
@@ -174,7 +182,7 @@
   }
 
   window.FM = {
-    sb, configurado, STATUS, TONS, ESTADOS, FUSO,
+    sb, configurado, STATUS, TONS, ESTADOS, FUSO, emailDoUsuario,
     esc, data, dataHora, hora, moeda, numero, pct, diasAte,
     sessaoDoToken, aparelho, linkTelegram, montarMensagem, aviso, erroAmigavel,
     svgBarras, svgLinhas, svgVazio,
