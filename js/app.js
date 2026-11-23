@@ -394,7 +394,7 @@
       return `<section class="pilha" aria-label="${id}"><div class="cartao"><div class="ativo-nome">${id}</div><span class="sub">${desc}</span><p class="vazio">Aguardando os primeiros dados.</p></div></section>`;
     }
     const d = linha.dados || {};
-    const est = FM.ESTADOS[d.estado] || FM.ESTADOS.neutro;
+    const est = d.aquecendo ? { nome: "Aquecendo", tom: "neutro" } : (FM.ESTADOS[d.estado] || FM.ESTADOS.neutro);
     const cor = FM.TONS[est.tom];
     const posCor = d.posicao === "acima" ? "var(--compra)" : d.posicao === "abaixo" ? "var(--venda)" : "var(--sub)";
     const posTexto = d.posicao === "acima" ? "Acima da referência do dia" : d.posicao === "abaixo" ? "Abaixo da referência do dia" : "Na referência do dia";
@@ -428,7 +428,7 @@
         <div class="divisor"></div>
         <span class="rotulo">Estado do fluxo</span>
         <div class="estado"><span class="estado-ponto" style="background:${cor};box-shadow:0 0 0 6px color-mix(in srgb, ${cor} 18%, transparent)"></span><span class="estado-nome" style="color:${cor}">${est.nome}</span></div>
-        ${d.estado && d.estado !== "neutro" ? `<div class="confianca"><span class="sub" style="width:84px">Confiança</span><div class="barra"><div style="width:${conf}%;background:${cor}"></div></div><strong style="width:44px;text-align:right">${conf}%</strong></div>` : ""}
+        ${!d.aquecendo && d.estado && d.estado !== "neutro" ? `<div class="confianca"><span class="sub" style="width:84px">Confiança</span><div class="barra"><div style="width:${conf}%;background:${cor}"></div></div><strong style="width:44px;text-align:right">${conf}%</strong></div>` : ""}
         ${d.frase ? `<p class="frase">${FM.esc(d.frase)}</p>` : ""}
       </div>
       <div class="cartao">
@@ -463,6 +463,7 @@
     if (!c && !w && !d) { $("#cruzado").innerHTML = `<p class="vazio">Aguardando os primeiros dados.</p>`; return; }
     const est = (x) => {
       if (!x) return "—";
+      if (x.aquecendo) return `<span style="color:var(--neutro)">aquecendo</span>`;
       const e = FM.ESTADOS[x.estado] || FM.ESTADOS.neutro;
       return `<span style="color:${FM.TONS[e.tom]}">${e.nome.toLowerCase()}</span>`;
     };
