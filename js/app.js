@@ -42,6 +42,9 @@
   });
   let timerLicenca = null;
   let timerDados = null;
+  let timerVigia = null;     // confere se o tempo real está chegando; se não, reconecta sozinho
+  let timerReconexao = null;
+  let tentativas = 0;
   let pedidoInstalar = null;
 
   const PREFERENCIAS = [
@@ -81,9 +84,12 @@
   $$("[data-sair]").forEach((b) => b.addEventListener("click", () => sair()));
 
   function pararTudo() {
-    if (canal) { sb.removeChannel(canal); canal = null; }
+    fecharCanal();
     clearInterval(timerLicenca);
     clearInterval(timerDados);
+    clearInterval(timerVigia);
+    clearTimeout(timerReconexao);
+    timerReconexao = null;
   }
 
   async function sair(mensagem) {
@@ -239,8 +245,45 @@
     assinar();
     clearInterval(timerLicenca);
     clearInterval(timerDados);
+    clearInterval(timerVigia);
     timerLicenca = setInterval(revisarLicenca, 60000);
     timerDados = setInterval(atualizarStatusDados, 5000);
+    timerVigia = setInterval(vigiar, 15000);
+  }
+
+  // ---------------- recuperação automática do tempo real ----------------
+  function fecharCanal() {
+    if (canal) {
+      const velho = canal;
+      canal = null;              // assim o aviso de "fechado" do canal velho é ignorado
+      sb.removeChannel(velho);
+    }
+  }
+
+  function agendarReconexao() {
+    if (timerReconexao || !lic || $("#tela-app").hidden) return;
+    tentativas += 1;
+    const espera = Math.min(30000, 2000 * tentativas);   // 2s, 4s, 6s... até 30s
+    timerReconexao = setTimeout(() => {
+      timerReconexao = null;
+      if (!lic || $("#tela-app").hidden) return;
+      assinar();
+      carregarDados();
+    }, espera);
+  }
+
+  // A cada 15s confere no servidor se chegou dado novo que o tempo real não entregou.
+  async function vigiar() {
+    if (!lic || $("#tela-app").hidden || document.hidden) return;
+    const { data, error } = await sb.from("coletor").select("*").eq("id", 1).maybeSingle();
+    if (error || !data || !data.ultimo_envio) return;
+    const servidor = new Date(data.ultimo_envio).getTime();
+    const local = coletor && coletor.ultimo_envio ? new Date(coletor.ultimo_envio).getTime() : 0;
+    if (servidor - local > 10000) {
+      // o servidor está mais novo do que o que chegou aqui: a conexão caiu sem avisar
+      assinar();
+      await carregarDados();
+    }
   }
 
   async function revisarLicenca() {
@@ -301,8 +344,8 @@
   }
 
   function assinar() {
-    if (canal) sb.removeChannel(canal);
-    canal = sb
+    fecharCanal();
+    const novo = sb
       .channel("fluxo-" + Math.random().toString(36).slice(2))
       .on("postgres_changes", { event: "*", schema: "public", table: "estado_atual" }, (p) => {
         const linha = p.new && p.new.ativo ? p.new : null;
@@ -329,8 +372,15 @@
           revisarLicenca();
         }
       })
-      .subscribe();
+      .subscribe((status) => {
+        if (canal !== novo) return;              // canal antigo, já substituído
+        if (status === "SUBSCRIBED") { tentativas = 0; return; }
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") agendarReconexao();
+      });
+    canal = novo;
   }
+
+  window.addEventListener("online", () => { if (lic && !$("#tela-app").hidden) { assinar(); carregarDados(); } });
 
   function atualizarStatusDados() {
     const ponto = $("#status-ponto");
