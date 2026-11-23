@@ -15,6 +15,31 @@
   let filtro = "ambos";
   let abaAtual = "painel";
   const abertos = new Set(); // eventos expandidos
+  const infosAbertas = new Set(); // explicações "?" abertas
+
+  // Explicações curtas, sem revelar os indicadores por trás
+  const INFOS = {
+    referencia: "É o preço médio negociado no dia até agora. Acima dele, o lado comprador vem dominando o pregão; abaixo, o lado vendedor.",
+    pressao: "Quem está agredindo agora: compras e vendas que foram executadas nos últimos minutos. É a medida que mais pesa na leitura.",
+    forca: "Quem vem dominando nos últimos 30 minutos, considerando também onde o preço está em relação à referência do dia. Muda devagar e dá o contexto.",
+    interesse: "O lado das ofertas que estão esperando para ser negociadas. São intenções, não negócios fechados, e podem ser retiradas a qualquer momento. Use só como contexto.",
+  };
+  function botaoInfo(chave, rotulo) {
+    const aberto = infosAbertas.has(chave);
+    return `<button type="button" class="info" data-info="${chave}" aria-expanded="${aberto}" aria-label="O que é ${rotulo}?">?</button>`;
+  }
+  function textoInfo(chave, tipo) {
+    return infosAbertas.has(chave) ? `<p class="info-texto">${INFOS[tipo]}</p>` : "";
+  }
+  document.addEventListener("click", (ev) => {
+    const b = ev.target.closest("[data-info]");
+    if (!b) return;
+    const chave = b.dataset.info;
+    if (infosAbertas.has(chave)) infosAbertas.delete(chave); else infosAbertas.add(chave);
+    renderAtivos();
+    const novo = document.querySelector(`[data-info="${chave}"]`);
+    if (novo) novo.focus();
+  });
   let timerLicenca = null;
   let timerDados = null;
   let pedidoInstalar = null;
@@ -402,13 +427,16 @@
     const ind = d.indices || {};
     const s = d.series || {};
 
-    const indices = [["Pressão", ind.pressao], ["Interesse", ind.interesse], ["Força", ind.forca]]
+    // ordem de importância: Pressão, Força, Interesse
+    const indices = [["Pressão", ind.pressao, "pressao"], ["Força", ind.forca, "forca"], ["Interesse", ind.interesse, "interesse"]]
       .filter(([, v]) => v !== undefined && v !== null)
-      .map(([nome, v]) => {
+      .map(([nome, v, tipo]) => {
         const p = limitar(Number(v), 0, 100);
+        const chave = id + "-" + tipo;
         return `<div class="indice">
-          <div class="linha-flex" style="font-size:13px"><span style="color:var(--texto2);font-weight:500">${nome}</span>
+          <div class="linha-flex" style="font-size:13px"><span style="color:var(--texto2);font-weight:500;display:inline-flex;align-items:center;gap:6px">${nome} ${botaoInfo(chave, nome)}</span>
           <span><span style="color:var(--compra);font-weight:600">${FM.pct(p)} compra</span> <span class="sub">e</span> <span style="color:var(--venda);font-weight:600">${FM.pct(100 - p)} venda</span></span></div>
+          ${textoInfo(chave, tipo)}
           <div class="barra-dupla" role="img" aria-label="${nome}: ${FM.pct(p)} do lado comprador"><div style="width:${p}%"></div></div>
         </div>`;
       }).join("");
@@ -423,8 +451,9 @@
       <div class="cartao">
         <div class="ativo-topo">
           <div><div class="ativo-nome">${id}</div><span class="sub">${desc}</span></div>
-          <div><div class="ativo-preco">${FM.numero(d.preco, id === "WDO" ? 1 : 0)}</div><div style="font-size:13px;font-weight:600;color:${posCor};text-align:right">${posTexto}</div></div>
+          <div><div class="ativo-preco">${FM.numero(d.preco, id === "WDO" ? 1 : 0)}</div><div style="font-size:13px;font-weight:600;color:${posCor};display:flex;align-items:center;justify-content:flex-end;gap:6px">${posTexto} ${botaoInfo(id + "-referencia", "a referência do dia")}</div></div>
         </div>
+        ${textoInfo(id + "-referencia", "referencia")}
         <div class="divisor"></div>
         <span class="rotulo">Estado do fluxo</span>
         <div class="estado"><span class="estado-ponto" style="background:${cor};box-shadow:0 0 0 6px color-mix(in srgb, ${cor} 18%, transparent)"></span><span class="estado-nome" style="color:${cor}">${est.nome}</span></div>

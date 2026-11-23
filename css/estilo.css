@@ -151,6 +151,13 @@ h1, h2, h3 { font-family: var(--titulo); letter-spacing: -0.01em; margin: 0; }
 .interruptor > span { width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform 0.2s; }
 .interruptor[aria-pressed="true"] { background: var(--acento-forte); }
 .interruptor[aria-pressed="true"] > span { transform: translateX(22px); }
+.info {
+  width: 22px; height: 22px; border-radius: 50%; border: 1px solid #33405A; background: transparent; color: var(--sub);
+  font-size: 12px; font-weight: 700; line-height: 1; padding: 0; cursor: pointer; flex-shrink: 0; position: relative;
+}
+.info::before { content: ""; position: absolute; inset: -10px; }
+.info:hover, .info[aria-expanded="true"] { color: var(--texto); border-color: var(--acento); }
+.info-texto { margin: 6px 0 4px; font-size: 13px; line-height: 1.5; color: var(--texto2); background: #0D111A; border: 1px solid var(--borda); border-radius: 10px; padding: 10px 12px; font-weight: 400; }
 .item-alerta { display: flex; align-items: center; justify-content: space-between; gap: 12px; border-top: 1px solid var(--linha); padding: 12px 0; }
 
 /* ---------- tabelas ---------- */
