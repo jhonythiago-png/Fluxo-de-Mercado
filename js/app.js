@@ -94,6 +94,7 @@
 
   async function sair(mensagem) {
     pararTudo();
+    await desativarPush();
     await sb.auth.signOut({ scope: "local" }).catch(() => {});
     lic = null;
     estados = {};
@@ -155,6 +156,7 @@
     if (error) throw error;
     if (!data) throw new Error("Perfil não encontrado. Fale com o suporte.");
     lic = data;
+    lic.alertas = Object.assign({}, PADRAO_ALERTAS, data.alertas || {});
     return data;
   }
 
@@ -235,6 +237,7 @@
   // ---------------- app ----------------
   function abrirApp() {
     mostrar("app");
+    ativarPush(false);
     $("#btn-master").hidden = lic.papel !== "master";
     renderLegenda();
     renderFaixas();
@@ -556,11 +559,28 @@
   }
 
   // ---------------- alertas ----------------
+  const PADRAO_ALERTAS = { estado: true, reversao: true, lado: false, cruzado: true, som: true, volume: 70 };
+  let pushAtivo = false;     // este aparelho recebe alertas com o app fechado
+  let ajudaAberta = false;
+
+  function ehIOS() { return /iPhone|iPad|iPod/.test(navigator.userAgent); }
+  function instalado() { return window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true; }
+  function pushSuportado() { return "serviceWorker" in navigator && "PushManager" in window && "Notification" in window; }
+
   function renderPreferencias() {
-    const pref = lic.alertas || {};
-    $("#preferencias").innerHTML = PREFERENCIAS.map(([k, nome, desc]) => `
+    const pref = lic.alertas;
+    const itens = PREFERENCIAS.map(([k, nome, desc]) => `
       <div class="item-alerta"><div style="min-width:0"><div style="font-weight:600">${nome}</div><div class="sub">${desc}</div></div>
       <button type="button" class="interruptor" data-pref="${k}" aria-pressed="${!!pref[k]}" aria-label="${nome}"><span></span></button></div>`).join("");
+    const som = `
+      <div class="item-alerta"><div style="min-width:0"><div style="font-weight:600">Som dos alertas</div><div class="sub">Um som diferente para cada tipo de leitura, com o app aberto</div></div>
+      <button type="button" class="interruptor" data-pref="som" aria-pressed="${pref.som !== false}" aria-label="Som dos alertas"><span></span></button></div>
+      <div class="item-alerta" style="border-top:0;padding-top:0">
+        <label for="volume-alertas" class="sub" style="flex-shrink:0">Volume</label>
+        <input id="volume-alertas" type="range" min="10" max="100" step="5" value="${pref.volume ?? 70}" style="flex:1;min-width:80px;accent-color:var(--acento-forte)">
+        <button type="button" class="btn pequeno" id="btn-testar-som">Testar som</button>
+      </div>`;
+    $("#preferencias").innerHTML = itens + som + `<div id="ajuda-notificacoes"></div>`;
     atualizarBotaoNotificacao();
   }
 
@@ -574,17 +594,157 @@
     const { error } = await sb.rpc("salvar_alertas", { p_alertas: novo });
     if (error) { b.setAttribute("aria-pressed", String(!novo[k])); FM.aviso(FM.erroAmigavel(error), "erro"); return; }
     lic.alertas = novo;
+    if (k === "som" && novo.som) tocarSom("compra", true);
   });
+
+  document.addEventListener("input", (ev) => {
+    if (ev.target.id === "volume-alertas" && lic) lic.alertas.volume = Number(ev.target.value);
+  });
+  document.addEventListener("change", async (ev) => {
+    if (ev.target.id !== "volume-alertas" || !lic) return;
+    tocarSom("compra", true);
+    const { error } = await sb.rpc("salvar_alertas", { p_alertas: lic.alertas });
+    if (error) FM.aviso(FM.erroAmigavel(error), "erro");
+  });
+  document.addEventListener("click", (ev) => {
+    if (!ev.target.closest("#btn-testar-som")) return;
+    tocarSom("compra", true);
+    setTimeout(() => tocarSom("venda", true), 650);
+    setTimeout(() => tocarSom("reversao", true), 1300);
+  });
+
+  // ---- som (gerado pelo próprio app, não depende do som de notificação do sistema)
+  let audioCtx = null;
+  function prepararAudio() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      if (!audioCtx) audioCtx = new AC();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+    } catch (e) { /* sem áudio neste navegador */ }
+  }
+  // O navegador só libera o som depois de um toque ou clique na página
+  document.addEventListener("pointerdown", prepararAudio, { passive: true });
+  document.addEventListener("keydown", prepararAudio);
+
+  // [frequência, atraso em segundos]: subindo = compra, descendo = venda, dois toques duplos = reversão
+  const SONS = {
+    compra: [[659, 0], [880, 0.14]],
+    venda: [[880, 0], [659, 0.14]],
+    absorcao: [[784, 0], [784, 0.16]],
+    montando: [[587, 0], [784, 0.14]],
+    reversao: [[740, 0], [988, 0.12], [740, 0.3], [988, 0.42]],
+    neutro: [[660, 0]],
+  };
+  function tocarSom(tom, forcar) {
+    const pref = (lic && lic.alertas) || PADRAO_ALERTAS;
+    if (!forcar && pref.som === false) return;
+    prepararAudio();
+    if (!audioCtx || audioCtx.state !== "running") return;
+    const vol = Math.max(0.05, Math.min(1, (pref.volume ?? 70) / 100)) * 0.35;
+    const t0 = audioCtx.currentTime + 0.02;
+    (SONS[tom] || SONS.neutro).forEach(([f, d]) => {
+      [[f, 1], [f * 2, 0.18]].forEach(([freq, g]) => {
+        const o = audioCtx.createOscillator();
+        const ga = audioCtx.createGain();
+        o.type = "sine";
+        o.frequency.value = freq;
+        ga.gain.setValueAtTime(0.0001, t0 + d);
+        ga.gain.exponentialRampToValueAtTime(vol * g, t0 + d + 0.015);
+        ga.gain.exponentialRampToValueAtTime(0.0001, t0 + d + 0.45);
+        o.connect(ga).connect(audioCtx.destination);
+        o.start(t0 + d);
+        o.stop(t0 + d + 0.5);
+      });
+    });
+  }
+
+  // ---- notificação com o app fechado (Web Push)
+  function chaveParaBytes(b64) {
+    const p = "=".repeat((4 - (b64.length % 4)) % 4);
+    const bin = atob((b64 + p).replace(/-/g, "+").replace(/_/g, "/"));
+    return Uint8Array.from(bin, (c) => c.charCodeAt(0));
+  }
+
+  async function ativarPush(avisar) {
+    if (!lic || !lic.vapid_publica || !pushSuportado() || Notification.permission !== "granted") { atualizarBotaoNotificacao(); return; }
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      let sub = await reg.pushManager.getSubscription();
+      if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: chaveParaBytes(lic.vapid_publica) });
+      const j = sub.toJSON();
+      const { error } = await sb.rpc("salvar_inscricao_push", {
+        p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth, p_aparelho: FM.aparelho(),
+      });
+      if (error) throw error;
+      pushAtivo = true;
+      if (avisar) FM.aviso("Pronto! Os alertas chegam neste aparelho mesmo com o app fechado.", "ok");
+    } catch (e) {
+      pushAtivo = false;
+      if (avisar) FM.aviso("Não consegui ativar as notificações neste aparelho. " + FM.erroAmigavel(e), "erro");
+    }
+    atualizarBotaoNotificacao();
+  }
+
+  async function desativarPush() {
+    try {
+      if (!pushSuportado()) return;
+      const reg = await navigator.serviceWorker.getRegistration();
+      const sub = reg && (await reg.pushManager.getSubscription());
+      if (sub) {
+        await sb.rpc("remover_inscricao_push", { p_endpoint: sub.endpoint });
+        await sub.unsubscribe();
+      }
+    } catch (e) { /* segue saindo */ }
+    pushAtivo = false;
+  }
+
+  const AJUDA_NOTIFICACOES = `<div class="info-texto">
+    <strong>Como liberar as notificações</strong><br>
+    <strong>No computador (Chrome ou Edge):</strong> clique no ícone à esquerda do endereço do site, em Notificações escolha Permitir e recarregue a página.<br>
+    <strong>No Android:</strong> toque nos três pontinhos, depois no ícone de informações do site, em Permissões e em Notificações: Permitir.<br>
+    <strong>No iPhone:</strong> instale o app na tela inicial (Compartilhar, Adicionar à Tela de Início) e abra por ele. Precisa do iOS 16.4 ou mais novo.<br>
+    Para ouvir o som com o app fechado, deixe o som de notificações ligado no Windows ou no celular.</div>`;
 
   function atualizarBotaoNotificacao() {
     const b = $("#btn-notificacoes");
-    if (!("Notification" in window)) { b.hidden = true; return; }
-    if (Notification.permission === "granted") { b.textContent = "Notificações ativas"; b.disabled = true; }
-    else if (Notification.permission === "denied") { b.textContent = "Notificações bloqueadas no navegador"; b.disabled = true; }
-    else { b.textContent = "Ativar notificações"; b.disabled = false; }
+    const ajuda = $("#ajuda-notificacoes");
+    if (!b) return;
+    if (!("Notification" in window)) {
+      b.hidden = true;
+      if (ajuda) ajuda.innerHTML = ehIOS() && !instalado()
+        ? `<p class="info-texto">No iPhone, as notificações só funcionam com o app instalado na tela inicial: toque em Compartilhar e depois em "Adicionar à Tela de Início".</p>` : "";
+      return;
+    }
+    b.hidden = false;
+    const perm = Notification.permission;
+    if (perm === "granted") {
+      const podePush = !!(lic && lic.vapid_publica) && pushSuportado();
+      b.textContent = pushAtivo || !podePush ? "Notificações ativas" : "Ativar com o app fechado";
+      b.disabled = pushAtivo || !podePush;
+    } else if (perm === "denied") {
+      b.textContent = ajudaAberta ? "Fechar ajuda" : "Como liberar as notificações";
+      b.disabled = false;
+    } else {
+      b.textContent = "Ativar notificações";
+      b.disabled = false;
+    }
+    if (ajuda) {
+      if (perm === "denied" && ajudaAberta) ajuda.innerHTML = AJUDA_NOTIFICACOES;
+      else if (pushAtivo) ajuda.innerHTML = `<p class="sub" style="margin:10px 0 0">Os alertas ligados acima chegam neste aparelho mesmo com o app fechado.</p>`;
+      else ajuda.innerHTML = "";
+    }
   }
+
   $("#btn-notificacoes").addEventListener("click", async () => {
-    try { await Notification.requestPermission(); } catch (e) { /* ignora */ }
+    prepararAudio();
+    if ("Notification" in window && Notification.permission === "denied") {
+      ajudaAberta = !ajudaAberta;
+      atualizarBotaoNotificacao();
+      return;
+    }
+    try { if (Notification.permission !== "granted") await Notification.requestPermission(); } catch (e) { /* ignora */ }
+    if (Notification.permission === "granted") await ativarPush(true);
     atualizarBotaoNotificacao();
   });
 
@@ -592,8 +752,11 @@
     if (!lic || !(lic.alertas || {})[ev.categoria]) return;
     const texto = `${ev.ativo}: ${ev.titulo}`;
     FM.aviso(texto);
+    tocarSom(ev.tom);
+    // Com o envio pelo servidor ativo, a notificação do sistema já chega por lá (sem duplicar)
+    if (pushAtivo) return;
     if (!("Notification" in window) || Notification.permission !== "granted" || !document.hidden) return;
-    const opcoes = { body: texto, icon: "icones/icone-192.png", badge: "icones/icone-192.png", tag: "evento-" + ev.id };
+    const opcoes = { body: texto, icon: "icones/icone-192.png", badge: "icones/icone-192.png", tag: "evento-" + ev.id, silent: true };
     if (navigator.serviceWorker && navigator.serviceWorker.ready) {
       navigator.serviceWorker.ready.then((reg) => reg.showNotification("Fluxo do Mercado", opcoes)).catch(() => {
         try { new Notification("Fluxo do Mercado", opcoes); } catch (e) { /* ignora */ }
